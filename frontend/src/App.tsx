@@ -21,9 +21,11 @@ type ChatResponse = {
 };
 
 type DocumentItem = {
-  id: string;
   title: string;
-  content_snippet: string;
+  source: string;
+  type: string;
+  chunk_count: number;
+  created_at: string;
 };
 
 // const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -79,7 +81,7 @@ export default function App() {
 
   const showToast = useCallback((text: string, type: "success" | "error" = "success") => {
     setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 5000);
   }, []);
 
   // Check Backend Health
@@ -125,12 +127,12 @@ export default function App() {
     void fetchDocuments();
   }, [fetchDocuments]);
 
-  const deleteDocument = useCallback(async (id: string, title: string) => {
-    if (!confirm(`'${title}' 문서를 삭제하시겠습니까?`)) return;
+  const deleteDocument = useCallback(async (title: string) => {
+    if (!confirm(`'${title}' 문서를 바탕으로 저장된 내용을 삭제하시겠습니까?`)) return;
     try {
-      const res = await fetch(`${API_BASE}/documents/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(title)}`, { method: "DELETE" });
       if (res.ok) {
-        showToast("문서가 삭제되었습니다.", "success");
+        showToast("해당 문서의 데이터가 삭제되었습니다.", "success");
         void fetchDocuments();
       } else {
         showToast("문서 삭제 거부됨 혹은 서버 에러.", "error");
@@ -341,18 +343,34 @@ export default function App() {
               ) : documents.length === 0 ? (
                 <span className="sidebarHint" style={{ textAlign: "center", display: "block" }}>업로드된 문서가 없습니다.</span>
               ) : (
-                documents.map(doc => (
-                  <div key={doc.id} className="docItem" title={doc.title}>
-                    <span className="docItemTitle">{doc.title}</span>
-                    <button 
-                      className="docDeleteBtn" 
-                      onClick={() => void deleteDocument(doc.id, doc.title)}
-                      title="삭제하기"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                ))
+                <table className="docTable">
+                  <thead>
+                    <tr>
+                      <th>제목</th>
+                      <th>청크 수</th>
+                      <th>생성일</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map(doc => (
+                      <tr key={doc.title}>
+                        <td className="docItemTitle" title={doc.title}>{doc.title}</td>
+                        <td className="docChunkVal">{doc.chunk_count}</td>
+                        <td className="docDate">{doc.created_at}</td>
+                        <td>
+                          <button 
+                            className="docDeleteBtn" 
+                            onClick={() => void deleteDocument(doc.title)}
+                            title="삭제하기"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}

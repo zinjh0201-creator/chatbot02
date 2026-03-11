@@ -47,34 +47,60 @@ async def list_documents() -> DocumentListResponse:
         raise HTTPException(status_code=500, detail="DB pool not initialized")
 
     sql = """
-        SELECT id::text, title, LEFT(content, 100) AS content_snippet
+        SELECT 
+            title, 
+            COUNT(*) AS chunk_count, 
+            MAX(created_at) AS latest_created
         FROM documents
-        ORDER BY id DESC
+        GROUP BY title
+        ORDER BY MAX(created_at) DESC
     """
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql)
 
-    docs = [
-        DocumentItem(id=row["id"], title=row["title"] or "제목 없음", content_snippet=row["content_snippet"] or "")
-        for row in rows
-    ]
+    docs = []
+    for row in rows:
+        title = row["title"] or "제목 없음"
+        doc_type = "pdf"
+        if title.lower().endswith(".pdf"):
+            doc_type = "pdf"
+        elif "notion" in title.lower():
+            doc_type = "notion"
+            
+        created_at_dt = row["latest_created"]
+        # Format like: 2026. 3. 11. 오후 7:05:56
+        if created_at_dt:
+            ampm = "오후" if created_at_dt.hour >= 12 else "오전"
+            hr12 = created_at_dt.hour % 12 or 12
+            created_at_str = f"{created_at_dt.year}. {created_at_dt.month}. {created_at_dt.day}. {ampm} {hr12}:{created_at_dt.minute:02d}:{created_at_dt.second:02d}"
+        else:
+            created_at_str = ""
+
+        docs.append(DocumentItem(
+            title=title,
+            source=title,
+            type=doc_type,
+            chunk_count=row["chunk_count"],
+            created_at=created_at_str
+        ))
+
     return DocumentListResponse(documents=docs)
 
 
-@app.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str) -> dict:
+@app.delete("/documents/{title}")
+async def delete_document(title: str) -> dict:
     pool = getattr(app.state, "pool", None)
     if pool is None:
         raise HTTPException(status_code=500, detail="DB pool not initialized")
 
-    sql = "DELETE FROM documents WHERE id = $1::bigint"
+    sql = "DELETE FROM documents WHERE title = $1"
     async with pool.acquire() as conn:
-        result = await conn.execute(sql, int(doc_id))
+        result = await conn.execute(sql, title)
 
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
 
-    return {"ok": True, "deleted_id": doc_id}
+    return {"ok": True, "deleted_title": title}
 
 
 @app.post("/chat", response_model=ChatResponse)

@@ -24,9 +24,11 @@ class IngestResponse(BaseModel):
 
 
 class DocumentItem(BaseModel):
-    id: str
     title: str
-    content_snippet: str
+    source: str
+    type: str
+    chunk_count: int
+    created_at: str
 
 
 class DocumentListResponse(BaseModel):

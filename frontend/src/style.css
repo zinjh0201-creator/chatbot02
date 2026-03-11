@@ -415,43 +415,64 @@ code {
   padding-right: 4px;
 }
 
-.docItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--white);
-  border: 1px solid var(--border);
+/* Document Table */
+.docTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--bg);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s;
+  margin-top: 10px;
 }
 
-.docItem:hover {
-  border-color: var(--blueBorder);
+.docTable th {
+  background-color: #f0f7ff;
+  color: #1e3a8a;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: normal;
+}
+
+.docTable th:nth-child(2),
+.docTable th:nth-child(3),
+.docTable th:nth-child(4) {
+  text-align: center;
+}
+
+.docTable td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--fg);
+}
+
+.docTable tr:last-child td {
+  border-bottom: none;
 }
 
 .docItemTitle {
-  font-size: 13px;
   font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 190px;
+  word-break: break-all;
+}
+
+.docChunkVal, .docDate {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .docDeleteBtn {
   background: none;
   border: none;
-  color: #ef4444; /* red */
   cursor: pointer;
-  padding: 4px;
-  font-size: 14px;
+  padding: 2px;
   opacity: 0.6;
   transition: opacity 0.2s, transform 0.2s;
+  display: flex;
+  margin: 0 auto;
 }
-
 .docDeleteBtn:hover:not(:disabled) {
   opacity: 1;
   transform: scale(1.1);
