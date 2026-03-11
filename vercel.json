@@ -1,18 +1,13 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/app/main.py",
-      "use": "@vercel/python"
-    },
+  "version": 3,
+  "projects": [
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": {
+        "distDir": "frontend/dist",
+        "buildCommand": "cd frontend && npm install && npm run build"
+      }
     }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "backend/app/main.py" },
-    { "source": "/(.*)", "destination": "/frontend/$1" }
   ]
 }
