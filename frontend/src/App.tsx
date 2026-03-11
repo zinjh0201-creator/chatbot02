@@ -174,26 +174,38 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY);
   }
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   return (
     <div className="page">
-      <aside className="sidebar">
-        <div className="sidebarTitle">
-          <span className="sidebarIcon" aria-hidden>
-            📄
-          </span>
-          문서 업로드
+      <aside className={`sidebar ${isSidebarOpen ? "" : "closed"}`}>
+        <div className="sidebarHeaderRow">
+          <div className="sidebarTitle">
+            <span className="sidebarIcon" aria-hidden>
+              📄
+            </span>
+            문서 업로드
+          </div>
+          <button 
+            type="button" 
+            className="closeSidebarBtn" 
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="사이드바 닫기"
+          >
+            ×
+          </button>
         </div>
-        <p className="sidebarHint">PDF 파일을 선택하세요</p>
+        <p className="sidebarHint">PDF 문서를 업로드해 주세요</p>
+        
         <div
           className={`dropZone ${dragOver ? "dropZoneActive" : ""}`}
+          onClick={() => fileInputRef.current?.click()}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
         >
-          <span className="dropZoneText">Drag and drop file here</span>
-          <span className="dropZoneLimit">
-            Limit {MAX_PDF_MB}MB per file - PDF
-          </span>
+          <span className="dropZoneText">여기로 파일을 드래그하세요</span>
+          <span className="dropZoneLimit">최대 {MAX_PDF_MB}MB 지원 (PDF)</span>
         </div>
         <button
           type="button"
@@ -201,7 +213,7 @@ export default function App() {
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
         >
-          Browse files
+          파일 찾아보기
         </button>
         <input
           ref={fileInputRef}
@@ -212,17 +224,28 @@ export default function App() {
           aria-hidden
         />
         {uploadError && <p className="uploadError">{uploadError}</p>}
-        {uploading && <p className="uploadStatus">업로드 중…</p>}
+        {uploading && <p className="uploadStatus">문서 분석 중…</p>}
       </aside>
 
       <main className="main">
         <header className="topbar">
-          <div className="titles">
-            <h1 className="title">생산성 강화 RAG 챗봇</h1>
-            <p className="subtitle">
-              PDF 문서를 업로드하고 관련된 질문을 해보세요! (관련 문서가 없을
-              경우 기본 LLM 성능으로 답변합니다)
-            </p>
+          <div className="topbarLeft">
+            {!isSidebarOpen && (
+              <button 
+                type="button" 
+                className="toggleSidebarBtn" 
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="사이드바 열기"
+              >
+                ≡
+              </button>
+            )}
+            <div className="titles">
+              <h1 className="title">생산성 강화 RAG 챗봇</h1>
+              <p className="subtitle">
+                사내 규정, 매뉴얼 등 PDF를 업로드하고 질문해 보세요.
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -230,7 +253,7 @@ export default function App() {
             onClick={clearHistory}
             disabled={pending || messages.length === 0}
           >
-            히스토리 삭제
+            대화 지우기
           </button>
         </header>
 
@@ -238,12 +261,12 @@ export default function App() {
           {messages.length === 0 ? (
             <div className="empty">
               <div className="emptyCard">
-                <div className="emptyTitle">질문을 입력해 보세요</div>
+                <div className="emptyTitle">무엇이든 물어보세요!</div>
                 <div className="emptyDesc">
-                  유사도 0.7 이상 문서가 있으면 <b>[문서 참조 답변]</b>, 아니면{" "}
-                  <b>[Gemini 추론 답변]</b>으로 시작합니다.
+                  왼쪽에 문서를 업로드하면 <b>[문서 참조 답변]</b>을,<br/> 
+                  업로드하지 않으면 <b>[AI 추론 답변]</b>을 제공합니다.
                 </div>
-                <div className="emptyHint">예: “사내 휴가 규정 요약해줘”</div>
+                <div className="emptyHint">예: "사내 휴가 규정 요약해 줘."</div>
               </div>
             </div>
           ) : (
@@ -255,17 +278,17 @@ export default function App() {
                     <div className="meta">
                       <span className={`badge ${m.meta.mode}`}>
                         {m.meta.mode === "document"
-                          ? "문서 참조"
-                          : "Gemini 추론"}
+                          ? "🎯 문서 참조"
+                          : "✨ AI 추론"}
                       </span>
                       {typeof m.meta.similarity === "number" ? (
                         <span className="sim">
-                          top sim: {m.meta.similarity.toFixed(3)}
+                          정확도: {(m.meta.similarity * 100).toFixed(1)}%
                         </span>
                       ) : null}
                       {m.meta.sources && m.meta.sources.length > 0 ? (
                         <details className="sources">
-                          <summary>참고 문서</summary>
+                          <summary>참고한 문서 열어보기</summary>
                           <ul>
                             {m.meta.sources.map((s) => (
                               <li key={s}>{s}</li>
@@ -279,7 +302,7 @@ export default function App() {
               </div>
             ))
           )}
-          {pending ? (
+          {pending && (
             <div className="msgRow assistant">
               <div className="msgBubble">
                 <div className="typing">
@@ -289,37 +312,40 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : null}
+          )}
         </div>
 
-        <div className="composer">
-          <textarea
-            className="input"
-            rows={2}
-            placeholder="질문을 입력하세요..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-            disabled={pending}
-          />
-          <button
-            type="button"
-            className="sendBtn"
-            onClick={() => void send()}
-            disabled={!canSend}
-            aria-label="전송"
-          >
-            <span className="sendArrow" aria-hidden>
-              ↑
-            </span>
-          </button>
+        <div className="composerWrapper">
+          <div className="composer">
+            <textarea
+              className="input"
+              rows={1}
+              placeholder="메시지를 입력하세요 (Shift + Enter로 줄바꿈)"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+              disabled={pending}
+            />
+            <button
+              type="button"
+              className="sendBtn"
+              onClick={() => void send()}
+              disabled={!canSend}
+              aria-label="전송"
+            >
+              <span className="sendArrow" aria-hidden>
+                ↑
+              </span>
+            </button>
+          </div>
         </div>
       </main>
     </div>
   );
 }
+
