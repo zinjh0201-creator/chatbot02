@@ -360,14 +360,15 @@ code {
 
 /* User Message Bubble */
 .msgRow.user .msgBubble {
-  background: var(--text); /* Dark Slate */
-  color: var(--white);
+  background: #e0f2fe; /* Light Sky Blue */
+  color: var(--text);
+  border: 1px solid #bae6fd;
   border-bottom-right-radius: 4px;
 }
 
 /* Assistant Message Bubble */
 .msgRow.assistant .msgBubble {
-  background: var(--white);
+  background: #f1f5f9; /* Light Slate Gray */
   border: 1px solid var(--border);
   color: var(--text);
   border-bottom-left-radius: 4px;
@@ -377,6 +378,113 @@ code {
   margin: 0;
   white-space: pre-wrap;
   font-family: inherit;
+}
+
+/* Document List Area in Sidebar */
+.docListContainer {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.docListToggleBtn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.docListToggleBtn:hover {
+  color: var(--blue);
+}
+
+.docList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.docItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.docItem:hover {
+  border-color: var(--blueBorder);
+}
+
+.docItemTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+}
+
+.docDeleteBtn {
+  background: none;
+  border: none;
+  color: #ef4444; /* red */
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.docDeleteBtn:hover:not(:disabled) {
+  opacity: 1;
+  transform: scale(1.1);
+}
+.docDeleteBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+/* Toast Message */
+.toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981; /* Emerald green */
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  animation: slideDown 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
 }
 
 /* Metadata (Badges, Sources) */

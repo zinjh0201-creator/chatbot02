@@ -7,7 +7,7 @@ from pypdf import PdfReader
 
 from .config import settings
 from .db import create_pool
-from .models import ChatRequest, ChatResponse, IngestRequest, IngestResponse
+from .models import ChatRequest, ChatResponse, IngestRequest, IngestResponse, DocumentItem, DocumentListResponse
 from .rag import answer_with_rag
 from .gemini_client import embed_text
 
@@ -38,6 +38,43 @@ async def _shutdown() -> None:
 @app.get("/health")
 async def health() -> dict:
     return {"ok": True}
+
+
+@app.get("/documents", response_model=DocumentListResponse)
+async def list_documents() -> DocumentListResponse:
+    pool = getattr(app.state, "pool", None)
+    if pool is None:
+        raise HTTPException(status_code=500, detail="DB pool not initialized")
+
+    sql = """
+        SELECT id::text, title, LEFT(content, 100) AS content_snippet
+        FROM documents
+        ORDER BY id DESC
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(sql)
+
+    docs = [
+        DocumentItem(id=row["id"], title=row["title"] or "제목 없음", content_snippet=row["content_snippet"] or "")
+        for row in rows
+    ]
+    return DocumentListResponse(documents=docs)
+
+
+@app.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str) -> dict:
+    pool = getattr(app.state, "pool", None)
+    if pool is None:
+        raise HTTPException(status_code=500, detail="DB pool not initialized")
+
+    sql = "DELETE FROM documents WHERE id = $1::bigint"
+    async with pool.acquire() as conn:
+        result = await conn.execute(sql, int(doc_id))
+
+    if result == "DELETE 0":
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+
+    return {"ok": True, "deleted_id": doc_id}
 
 
 @app.post("/chat", response_model=ChatResponse)

@@ -22,3 +22,12 @@ class IngestRequest(BaseModel):
 class IngestResponse(BaseModel):
     id: str
 
+
+class DocumentItem(BaseModel):
+    id: str
+    title: str
+    content_snippet: str
+
+
+class DocumentListResponse(BaseModel):
+    documents: list[DocumentItem]

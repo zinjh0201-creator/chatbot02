@@ -20,6 +20,12 @@ type ChatResponse = {
   sources?: string[];
 };
 
+type DocumentItem = {
+  id: string;
+  title: string;
+  content_snippet: string;
+};
+
 // const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -49,6 +55,14 @@ export default function App() {
     }
   });
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Document Management State
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isDocListOpen, setIsDocListOpen] = useState(false);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -61,6 +75,45 @@ export default function App() {
       behavior: "smooth",
     });
   }, [messages.length, pending]);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  const fetchDocuments = useCallback(async () => {
+    setLoadingDocs(true);
+    try {
+      const res = await fetch(`${API_BASE}/documents`);
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch documents", e);
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchDocuments();
+  }, [fetchDocuments]);
+
+  const deleteDocument = useCallback(async (id: string, title: string) => {
+    if (!confirm(`'${title}' 문서를 삭제하시겠습니까?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/documents/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("문서가 삭제되었습니다.");
+        void fetchDocuments();
+      } else {
+        alert("문서 삭제에 실패했습니다.");
+      }
+    } catch (e) {
+      alert("문서 삭제 중 오류가 발생했습니다.");
+    }
+  }, [fetchDocuments, showToast]);
 
   const canSend = useMemo(
     () => input.trim().length > 0 && !pending,
@@ -133,12 +186,14 @@ export default function App() {
         throw new Error(err.detail || `업로드 실패 (${res.status})`);
       }
       setUploadError(null);
+      showToast("문서 업로드 및 분석이 완료되었습니다!");
+      void fetchDocuments(); // Refresh document list
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "업로드 실패");
     } finally {
       setUploading(false);
     }
-  }, []);
+  }, [fetchDocuments, showToast]);
 
   const onFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,17 +229,17 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   return (
     <div className="page">
+      {toastMessage && <div className="toast">{toastMessage}</div>}
+      
       <aside className={`sidebar ${isSidebarOpen ? "" : "closed"}`}>
         <div className="sidebarHeaderRow">
           <div className="sidebarTitle">
             <span className="sidebarIcon" aria-hidden>
               📄
             </span>
-            문서 업로드
+            문서 관리
           </div>
           <button 
             type="button" 
@@ -195,7 +250,7 @@ export default function App() {
             ×
           </button>
         </div>
-        <p className="sidebarHint">PDF 문서를 업로드해 주세요</p>
+        <p className="sidebarHint">PDF를 업로드하거나 삭제하세요</p>
         
         <div
           className={`dropZone ${dragOver ? "dropZoneActive" : ""}`}
@@ -213,7 +268,7 @@ export default function App() {
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
         >
-          파일 찾아보기
+          {uploading ? "문서 분석 중..." : "파일 찾아보기"}
         </button>
         <input
           ref={fileInputRef}
@@ -224,7 +279,39 @@ export default function App() {
           aria-hidden
         />
         {uploadError && <p className="uploadError">{uploadError}</p>}
-        {uploading && <p className="uploadStatus">문서 분석 중…</p>}
+
+        <div className="docListContainer">
+          <button 
+            className="docListToggleBtn" 
+            onClick={() => setIsDocListOpen(!isDocListOpen)}
+          >
+            <span>📌 저장된 문서 보기 ({documents.length})</span>
+            <span>{isDocListOpen ? "▲" : "▼"}</span>
+          </button>
+          
+          {isDocListOpen && (
+            <div className="docList">
+              {loadingDocs ? (
+                <span className="sidebarHint" style={{ textAlign: "center", display: "block" }}>불러오는 중...</span>
+              ) : documents.length === 0 ? (
+                <span className="sidebarHint" style={{ textAlign: "center", display: "block" }}>업로드된 문서가 없습니다.</span>
+              ) : (
+                documents.map(doc => (
+                  <div key={doc.id} className="docItem" title={doc.title}>
+                    <span className="docItemTitle">{doc.title}</span>
+                    <button 
+                      className="docDeleteBtn" 
+                      onClick={() => void deleteDocument(doc.id, doc.title)}
+                      title="삭제하기"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </aside>
 
       <main className="main">
@@ -259,7 +346,7 @@ export default function App() {
 
         <div className="chat" ref={listRef}>
           {messages.length === 0 ? (
-            <div className="empty">
+           <div className="empty">
               <div className="emptyCard">
                 <div className="emptyTitle">무엇이든 물어보세요!</div>
                 <div className="emptyDesc">
